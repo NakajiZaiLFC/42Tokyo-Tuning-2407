@@ -15,14 +15,14 @@ impl AuthRepositoryImpl {
 }
 
 impl AuthRepository for AuthRepositoryImpl {
-    // async fn find_user_by_id(&self, id: i32) -> Result<Option<User>, AppError> {
-    //     let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE id = ?")
-    //         .bind(id)
-    //         .fetch_optional(&self.pool)
-    //         .await?;
+    async fn find_user_by_id(&self, id: i32) -> Result<Option<User>, AppError> {
+        let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
 
-    //     Ok(user)
-    // }
+        Ok(user)
+    }
 
     async fn find_user_by_username(&self, username: &str) -> Result<Option<User>, AppError> {
         let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE username = ?")
@@ -33,26 +33,17 @@ impl AuthRepository for AuthRepositoryImpl {
         Ok(user)
     }
 
-	async fn find_user_and_profile_image_by_id(&self, user_id: i32) -> Result<(Option<User>, Option<String>), AppError> {
-		let result = sqlx::query_as!(User, "SELECT * FROM users WHERE id = ?", user_id)
-			.fetch_optional(&self.pool)
-			.await?;
-	
-		let profile_image = result.as_ref().map(|user| user.profile_image.clone());
-		Ok((result, profile_image))
-	} 
+    async fn find_profile_image_name_by_user_id(
+        &self,
+        user_id: i32,
+    ) -> Result<Option<String>, AppError> {
+        let profile_image_name = sqlx::query_scalar("SELECT profile_image FROM users WHERE id = ?")
+            .bind(user_id)
+            .fetch_optional(&self.pool)
+            .await?;
 
-    // async fn find_profile_image_name_by_user_id(
-    //     &self,
-    //     user_id: i32,
-    // ) -> Result<Option<String>, AppError> {
-    //     let profile_image_name = sqlx::query_scalar("SELECT profile_image FROM users WHERE id = ?")
-    //         .bind(user_id)
-    //         .fetch_optional(&self.pool)
-    //         .await?;
-
-    //     Ok(profile_image_name)
-    // }
+        Ok(profile_image_name)
+    }
 
     async fn authenticate_user(&self, username: &str, password: &str) -> Result<User, AppError> {
         let user =
@@ -113,48 +104,27 @@ impl AuthRepository for AuthRepositoryImpl {
         Ok(session)
     }
 
-    // async fn find_dispatcher_by_id(&self, id: i32) -> Result<Option<Dispatcher>, AppError> {
-    //     let dispatcher = sqlx::query_as::<_, Dispatcher>("SELECT * FROM dispatchers WHERE id = ?")
-    //         .bind(id)
-    //         .fetch_optional(&self.pool)
-    //         .await?;
+    async fn find_dispatcher_by_id(&self, id: i32) -> Result<Option<Dispatcher>, AppError> {
+        let dispatcher = sqlx::query_as::<_, Dispatcher>("SELECT * FROM dispatchers WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
 
-    //     Ok(dispatcher)
-    // }
+        Ok(dispatcher)
+    }
 
-    // async fn find_dispatcher_by_user_id(
-    //     &self,
-    //     user_id: i32,
-    // ) -> Result<Option<Dispatcher>, AppError> {
-    //     let dispatcher =
-    //         sqlx::query_as::<_, Dispatcher>("SELECT * FROM dispatchers WHERE user_id = ?")
-    //             .bind(user_id)
-    //             .fetch_optional(&self.pool)
-    //             .await?;
+    async fn find_dispatcher_by_user_id(
+        &self,
+        user_id: i32,
+    ) -> Result<Option<Dispatcher>, AppError> {
+        let dispatcher =
+            sqlx::query_as::<_, Dispatcher>("SELECT * FROM dispatchers WHERE user_id = ?")
+                .bind(user_id)
+                .fetch_optional(&self.pool)
+                .await?;
 
-    //     Ok(dispatcher)
-    // }
-
-	async fn finddispatcher(&self, id: Option<i32>, user_id: Option<i32>) -> Result<Option<Dispatcher>, AppError> {
-		let mut query = "SELECT * FROM dispatchers".to_string();
-		if let Some(id) = id {
-			query.push_str(" WHERE id = ?");
-			let dispatcher = sqlx::query_as::<, Dispatcher>(&query)
-				.bind(id)
-				.fetchoptional(&self.pool)
-				.await?;
-			return Ok(dispatcher);
-		}
-		if let Some(user_id) = user_id {
-			query.push_str(" WHERE user_id = ?");
-			let dispatcher = sqlx::query_as::<, Dispatcher>(&query)
-				.bind(user_id)
-				.fetch_optional(&self.pool)
-				.await?;
-			return Ok(dispatcher);
-		}
-		Ok(None)
-	}
+        Ok(dispatcher)
+    }
 
     async fn create_dispatcher(&self, user_id: i32, area_id: i32) -> Result<(), AppError> {
         sqlx::query("INSERT INTO dispatchers (user_id, area_id) VALUES (?, ?)")
