@@ -1,5 +1,4 @@
 use sqlx::MySqlPool;
-
 use crate::{
     domains::map_service::MapRepository,
     models::graph::{Edge, Node},
@@ -14,75 +13,69 @@ impl MapRepositoryImpl {
     pub fn new(pool: MySqlPool) -> Self {
         MapRepositoryImpl { pool }
     }
+
+    async fn fetch_nodes(&self, sql: &str, area_id: Option<i32>) -> Result<Vec<Node>, sqlx::Error> {
+        match area_id {
+            Some(area_id) => {
+                sqlx::query_as::<, Node>(sql)
+                    .bind(areaid)
+                    .fetch_all(&self.pool)
+                    .await
+            }
+            None => {
+                sqlx::query_as::<, Node>(sql)
+                    .fetchall(&self.pool)
+                    .await
+            }
+        }
+    }
+
+    async fn fetch_edges(&self, sql: &str, area_id: Option<i32>) -> Result<Vec<Edge>, sqlx::Error> {
+        match area_id {
+            Some(area_id) => {
+                sqlx::query_as::<, Edge>(sql)
+                    .bind(areaid)
+                    .fetch_all(&self.pool)
+                    .await
+            }
+            None => {
+                sqlx::query_as::<, Edge>(sql)
+                    .fetch_all(&self.pool)
+                    .await
+            }
+        }
+    }
 }
 
 impl MapRepository for MapRepositoryImpl {
     async fn get_all_nodes(&self, area_id: Option<i32>) -> Result<Vec<Node>, sqlx::Error> {
-        let where_clause = match area_id {
-            Some(_) => "WHERE area_id = ?",
-            None => "",
+        let where_clause = if area_id.is_some() {
+            "WHERE area_id = ?"
+        } else {
+            ""
         };
 
-        let sql = format!(
-            "SELECT
-                * 
-            FROM
-                nodes
-            {}
-            ORDER BY
-                id",
+		let sql = format!(
+            "SELECT * FROM nodes {} ORDER BY id",
             where_clause
         );
 
-        let nodes = match area_id {
-            Some(area_id) => {
-                sqlx::query_as::<_, Node>(&sql)
-                    .bind(area_id)
-                    .fetch_all(&self.pool)
-                    .await?
-            }
-            None => {
-                sqlx::query_as::<_, Node>(&sql)
-                    .fetch_all(&self.pool)
-                    .await?
-            }
-        };
-
-        Ok(nodes)
+        self.fetch_nodes(&sql, area_id).await
     }
 
     async fn get_all_edges(&self, area_id: Option<i32>) -> Result<Vec<Edge>, sqlx::Error> {
-        let where_clause = match area_id {
-            Some(_) => "JOIN nodes n ON e.node_a_id = n.id WHERE n.area_id = ?",
-            None => "",
+        let where_clause = if area_id.is_some() {
+            "JOIN nodes n ON e.node_a_id = n.id WHERE n.area_id = ?"
+        } else {
+            ""
         };
 
         let sql = format!(
-            "SELECT
-                e.node_a_id,
-                e.node_b_id,
-                e.weight
-            FROM
-                edges e
-            {}",
+            "SELECT e.node_a_id, e.node_b_id, e.weight FROM edges e {}",
             where_clause
         );
 
-        let edges = match area_id {
-            Some(area_id) => {
-                sqlx::query_as::<_, Edge>(&sql)
-                    .bind(area_id)
-                    .fetch_all(&self.pool)
-                    .await?
-            }
-            None => {
-                sqlx::query_as::<_, Edge>(&sql)
-                    .fetch_all(&self.pool)
-                    .await?
-            }
-        };
-
-        Ok(edges)
+        self.fetch_edges(&sql, area_id).await
     }
 
     async fn get_area_id_by_node_id(&self, node_id: i32) -> Result<i32, sqlx::Error> {
